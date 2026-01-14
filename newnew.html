@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>餐廳營業時段盤點</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; }
+select { padding: 6px; margin-right: 10px; }
+table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+th, td { border: 1px solid #ccc; padding: 8px; }
+.open { background-color: #d4edda; }
+.closed { color: #999; }
+</style>
+</head>
+
+<body>
+
+<h2>🍽 餐廳營業時段盤點</h2>
+
+<label>星期：</label>
+<label><input type="checkbox" class="day" value="一"> 一</label>
+<label><input type="checkbox" class="day" value="二"> 二</label>
+<label><input type="checkbox" class="day" value="三"> 三</label>
+<label><input type="checkbox" class="day" value="四"> 四</label>
+<label><input type="checkbox" class="day" value="五"> 五</label>
+<label><input type="checkbox" class="day" value="六"> 六</label>
+<label><input type="checkbox" class="day" value="日"> 日</label>
+
+<br><br>
+
+<label>用餐時段：</label>
+<select id="slot">
+  <option value="">請選擇</option>
+  <option value="06:00-10:00">早餐06:00-10:00</option>
+  <option value="11:00-14:00">午餐11:00-14:00</option>
+  <option value="14:00-17:00">下午茶14:00-17:00</option>
+  <option value="17:00-24:00">晚餐17:00-24:00</option>
+</select>
+
+<br><br>
+<label><input type="checkbox" id="nowMode"> 以現在時間判斷</label>
+
+<br><br>
+<label>顯示：</label>
+<label><input type="radio" name="filter" class="filter" value="all" checked> 全顯示</label>
+<label><input type="radio" name="filter" class="filter" value="open"> 可去</label>
+<label><input type="radio" name="filter" class="filter" value="closed"> 不可去</label>
+
+
+<table>
+<thead>
+<tr>
+  <th>餐廳</th>
+  <th>星期</th>
+  <th>營業時間</th>
+  <th>餐廳種類</th>
+</tr>
+</thead>
+<tbody id="table"></tbody>
+</table>
+
+<script>
+// ===== 餐廳資料（統一 24 小時制）=====
+const restaurants = [
+  { name:"六扇門", day:"一", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"二", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"三", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"四", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"五", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"六", start:"11:00", end:"24:00", type:"火鍋店" },
+  { name:"六扇門", day:"日", start:"11:00", end:"24:00", type:"火鍋店" },
+
+  { name:"拾御鍋物(全)", day:"日", start:"11:00", end:"21:00", type:"火鍋店" },
+  { name:"拾御鍋物(早)", day:"二", start:"11:00", end:"15:00", type:"火鍋店" },
+  { name:"拾御鍋物(晚)", day:"二", start:"17:00", end:"21:00", type:"火鍋店" },
+  { name:"拾御鍋物(早)", day:"三", start:"11:00", end:"15:00", type:"火鍋店" },
+  { name:"拾御鍋物(晚)", day:"三", start:"17:00", end:"21:00", type:"火鍋店" },
+  { name:"拾御鍋物(早)", day:"四", start:"11:00", end:"15:00", type:"火鍋店" },
+  { name:"拾御鍋物(晚)", day:"四", start:"17:00", end:"21:00", type:"火鍋店" },
+  { name:"拾御鍋物(早)", day:"五", start:"11:00", end:"15:00", type:"火鍋店" },
+  { name:"拾御鍋物(晚)", day:"五", start:"17:00", end:"21:00", type:"火鍋店" },
+  { name:"拾御鍋物(全)", day:"六", start:"11:00", end:"21:00", type:"火鍋店" },
+ 
+
+  { name:"珍珍珍(早)", day:"一", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"一", start:"17:00", end:"22:00", type:"拉麵店" },
+  { name:"珍珍珍(早)", day:"三", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"三", start:"17:00", end:"22:00", type:"拉麵店" },
+  { name:"珍珍珍(早)", day:"四", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"四", start:"17:00", end:"22:00", type:"拉麵店" },
+  { name:"珍珍珍(早)", day:"五", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"五", start:"17:00", end:"22:00", type:"拉麵店" },
+  { name:"珍珍珍(早)", day:"六", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"六", start:"17:00", end:"22:00", type:"拉麵店" },
+  { name:"珍珍珍(早)", day:"日", start:"11:00", end:"14:00", type:"拉麵店" },
+  { name:"珍珍珍(晚)", day:"日", start:"17:00", end:"22:00", type:"拉麵店" },
+
+  { name:"東禾麵食(早)", day:"日", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"日", start:"17:00", end:"20:30", type:"麵店" },
+  { name:"東禾麵食(早)", day:"二", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"二", start:"17:00", end:"20:30", type:"麵店" },
+  { name:"東禾麵食(早)", day:"三", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"三", start:"17:00", end:"20:30", type:"麵店" },
+  { name:"東禾麵食(早)", day:"四", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"四", start:"17:00", end:"20:30", type:"麵店" },
+  { name:"東禾麵食(早)", day:"五", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"五", start:"17:00", end:"20:30", type:"麵店" },
+  { name:"東禾麵食(早)", day:"六", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東禾麵食(晚)", day:"六", start:"17:00", end:"20:30", type:"麵店" },
+
+  { name:"東隆古早麵食(早)", day:"日", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"日", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"一", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"一", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"二", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"二", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"三", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"三", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"四", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"四", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"五", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"五", start:"17:00", end:"20:00", type:"麵店" },
+  { name:"東隆古早麵食(早)", day:"六", start:"11:00", end:"14:00", type:"麵店" },
+  { name:"東隆古早麵食(晚)", day:"六", start:"17:00", end:"20:00", type:"麵店" },
+
+ 
+  { name:"劉家餛飩", day:"三", start:"17:00", end:"22:00", type:"麵店" },
+  { name:"劉家餛飩", day:"六", start:"17:00", end:"22:00", type:"麵店" },
+
+  { name:"樓梯", day:"一", start:"11:00", end:"20:00", type:"中西餐" },
+  { name:"樓梯", day:"三", start:"11:00", end:"20:00", type:"中西餐" },
+  { name:"樓梯", day:"四", start:"11:00", end:"20:00", type:"中西餐" },
+  { name:"樓梯", day:"五", start:"11:00", end:"20:00", type:"中西餐" },
+  { name:"樓梯", day:"六", start:"11:00", end:"20:00", type:"中西餐" },
+  { name:"樓梯", day:"日", start:"11:00", end:"20:00", type:"中西餐" },
+
+  { name:"億萊食堂(早)", day:"一", start:"11:00", end:"13:00", type:"中西餐" },
+  { name:"億萊食堂(晚)", day:"一", start:"17:00", end:"20:30", type:"中西餐" },
+  { name:"億萊食堂(早)", day:"二", start:"11:00", end:"13:00", type:"中西餐" },
+  { name:"億萊食堂(晚)", day:"二", start:"17:00", end:"20:30", type:"中西餐" },
+  { name:"億萊食堂(早)", day:"五", start:"11:00", end:"13:00", type:"中西餐" },
+  { name:"億萊食堂(晚)", day:"五", start:"17:00", end:"20:30", type:"中西餐" },
+  { name:"億萊食堂(早)", day:"六", start:"11:00", end:"13:00", type:"中西餐" },
+  { name:"億萊食堂(晚)", day:"六", start:"17:00", end:"20:30", type:"中西餐" },
+  { name:"億萊食堂(早)", day:"日", start:"11:00", end:"13:00", type:"中西餐" },
+  { name:"億萊食堂(晚)", day:"日", start:"17:00", end:"20:30", type:"中西餐" }
+];
+
+// ===== 工具 =====
+function toMin(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function isOpen(nowMin, open, close) {
+  return nowMin >= toMin(open) && nowMin <= toMin(close);
+}
+
+function getToday() {
+  return ["日","一","二","三","四","五","六"][new Date().getDay()];
+}
+
+// ===== 事件 =====
+document.querySelectorAll("input,select").forEach(el => el.onchange = update);
+
+function update() {
+  const table = document.getElementById("table");
+  table.innerHTML = "";
+
+  const nowMode = document.getElementById("nowMode").checked;
+  const filters = [...document.querySelectorAll(".filter:checked")].map(f => f.value);
+
+  if (!filters.length) return;
+
+  let now = new Date();
+  let nowMin = now.getHours() * 60 + now.getMinutes();
+  let today = getToday();
+
+  const days = [...document.querySelectorAll(".day:checked")].map(d => d.value);
+  const slot = document.getElementById("slot").value;
+  const [s, e] = slot ? slot.split("-") : [];
+
+  restaurants.forEach(r => {
+    if (nowMode) {
+      if (r.day !== today) return;
+      var open = isOpen(nowMin, r.start, r.end);
+    } else {
+      if (!days.includes(r.day) || !slot) return;
+      open = toMin(s) >= toMin(r.start) && toMin(e) <= toMin(r.end);
+    }
+
+    if (
+      (open && !filters.includes("open") && !filters.includes("all")) ||
+      (!open && !filters.includes("closed") && !filters.includes("all"))
+    ) return;
+
+    const tr = document.createElement("tr");
+    tr.className = open ? "open" : "closed";
+    tr.innerHTML = `
+      <td>${r.name}</td>
+      <td>週${r.day}</td>
+      <td>${r.start} ～ ${r.end}</td>
+      <td>${r.type}</td>
+    `;
+    table.appendChild(tr);
+  });
+}
+</script>
+
+</body>
+</html>
